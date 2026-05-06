@@ -22,7 +22,7 @@ alembic==1.13.3
 # cryptography : chiffrement (dépendance de jose)
 # httpx : client HTTP async pour parler à Keycloak
 PyJWT[crypto]==2.9.0
-cryptography==43.0.3
+cryptography==46.0.7
 httpx==0.27.2
 
 # ── Cache & Rate Limiting ─────────────────────
@@ -36,7 +36,7 @@ fastapi-limiter==0.1.6
 # python-dotenv : chargement du fichier .env
 pydantic-settings==2.5.2
 email-validator==2.2.0
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # ── Agent IA ──────────────────────────────────
 # anthropic : SDK officiel Claude API
@@ -46,7 +46,7 @@ anthropic==0.34.2
 # python-multipart : upload de fichiers
 # slowapi : rate limiting alternatif
 # structlog : logs structurés JSON (pour la production)
-python-multipart==0.0.12
+python-multipart==0.0.26
 slowapi==0.1.9
 structlog==24.4.0
 
@@ -55,6 +55,6 @@ structlog==24.4.0
 # pytest-asyncio : tests async avec FastAPI
 # httpx : client HTTP pour les tests (TestClient)
 # factory-boy : génération de données de test
-pytest==8.3.3
+pytest==9.0.3
 pytest-asyncio==0.24.0
 factory-boy==3.3.1

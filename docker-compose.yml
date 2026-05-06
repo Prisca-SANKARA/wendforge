@@ -1,0 +1,174 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────
+# WENDFORGE — Docker Compose Infrastructure
+# Services : PostgreSQL · Keycloak · Redis · FastAPI · n8n
+# Author   : SANKARA P. DJAMILATOU PRISCA
+# ─────────────────────────────────────────────
+
+services:
+
+  # ── BASE DE DONNÉES ──────────────────────────
+  # PostgreSQL est notre base de données principale.
+  # Toutes les données de WendForge sont stockées ici.
+  # Le volume 'postgres_data' persiste les données même
+  # si le container est supprimé ou redémarré.
+  postgres:
+    image: postgres:16-alpine
+    container_name: wendforge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wendforge
+      POSTGRES_USER: wendforge_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wendforge_user -d wendforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wendforge-network
+
+  # ── KEYCLOAK ─────────────────────────────────
+  # Keycloak gère toute l'authentification de WendForge.
+  # Il supporte OAuth2, OpenID Connect, MFA TOTP et SSO.
+  # On utilise la version 26 qui est la plus récente et stable.
+  # Il dépend de PostgreSQL car il stocke ses données dedans.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: wendforge-keycloak
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      # Identifiants admin Keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Connexion à PostgreSQL pour stocker les données Keycloak
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: wendforge_user
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Configuration réseau
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8080
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8280:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wendforge-network
+
+  # ── REDIS ────────────────────────────────────
+  # Redis est une base de données en mémoire ultra-rapide.
+  # On l'utilise pour deux choses :
+  # 1. Cache — stocker les résultats fréquents pour éviter
+  #    des requêtes répétées à PostgreSQL
+  # 2. Rate limiting — compter les requêtes par utilisateur
+  #    pour bloquer les abus
+  redis:
+    image: redis:7-alpine
+    container_name: wendforge-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wendforge-network
+
+  # ── FASTAPI ──────────────────────────────────
+  # C'est notre API principale — le cerveau de WendForge.
+  # Elle communique avec PostgreSQL (données), Redis (cache)
+  # et Keycloak (vérification des tokens JWT).
+  # Le volume monte le code source pour le hot-reload
+  # en développement — chaque modification est prise en compte
+  # sans redémarrer le container.
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wendforge-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://wendforge_user:${POSTGRES_PASSWORD}@postgres:5432/wendforge
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/wendforge
+      ENVIRONMENT: development
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wendforge-network
+
+  # ── N8N ──────────────────────────────────────
+  # n8n orchestre toutes les automatisations de WendForge.
+  # Quand FastAPI émet un événement (ticket créé, assigné,
+  # deadline dépassée), n8n reçoit le webhook et décide
+  # quoi faire : envoyer un email, notifier Slack, etc.
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: wendforge-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: wendforge_user
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wendforge-network
+
+# ── VOLUMES ──────────────────────────────────
+# Les volumes Docker persistent les données entre les
+# redémarrages. Sans eux, toutes les données seraient
+# perdues à chaque `docker-compose down`.
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+# ── RÉSEAU ───────────────────────────────────
+# Tous les services partagent le même réseau interne.
+# Ils peuvent se parler via leur nom de service (ex: "postgres")
+# sans exposer leurs ports à l'extérieur sauf ce qu'on définit.
+networks:
+  wendforge-network:
+    driver: bridge

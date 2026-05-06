@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────
+# WENDFORGE — Dépendances Python
+# ─────────────────────────────────────────────
+
+# ── Framework principal ───────────────────────
+# FastAPI : framework web moderne et ultra-rapide
+# uvicorn : serveur ASGI qui fait tourner FastAPI
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# ── Base de données ───────────────────────────
+# sqlmodel : ORM qui combine SQLAlchemy + Pydantic
+#            écrit par le créateur de FastAPI
+# psycopg2-binary : driver PostgreSQL pour Python
+# alembic : migrations de base de données (versioning du schéma)
+sqlmodel==0.0.21
+psycopg2-binary==2.9.9
+alembic==1.13.3
+
+# ── Authentification & Sécurité ───────────────
+# python-jose : manipulation des tokens JWT
+# cryptography : chiffrement (dépendance de jose)
+# httpx : client HTTP async pour parler à Keycloak
+PyJWT[crypto]==2.9.0
+cryptography==43.0.3
+httpx==0.27.2
+
+# ── Cache & Rate Limiting ─────────────────────
+# redis : client Redis pour Python
+# fastapi-limiter : rate limiting basé sur Redis
+redis==5.1.1
+fastapi-limiter==0.1.6
+
+# ── Validation & Configuration ────────────────
+# pydantic-settings : gestion des variables d'environnement
+# python-dotenv : chargement du fichier .env
+pydantic-settings==2.5.2
+email-validator==2.2.0
+python-dotenv==1.0.1
+
+# ── Agent IA ──────────────────────────────────
+# anthropic : SDK officiel Claude API
+anthropic==0.34.2
+
+# ── Utilitaires ───────────────────────────────
+# python-multipart : upload de fichiers
+# slowapi : rate limiting alternatif
+# structlog : logs structurés JSON (pour la production)
+python-multipart==0.0.12
+slowapi==0.1.9
+structlog==24.4.0
+
+# ── Tests ─────────────────────────────────────
+# pytest : framework de tests
+# pytest-asyncio : tests async avec FastAPI
+# httpx : client HTTP pour les tests (TestClient)
+# factory-boy : génération de données de test
+pytest==8.3.3
+pytest-asyncio==0.24.0
+factory-boy==3.3.1

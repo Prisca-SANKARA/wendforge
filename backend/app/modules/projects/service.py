@@ -127,7 +127,26 @@ class ProjectService:
         Supprime un projet et toutes ses données.
         Réservé aux admins uniquement.
         """
+        from sqlmodel import select
+        from app.modules.tickets.models import Ticket
+
         check_permission(requester_role, Permission.DELETE_PROJECT)
+
+        # Supprime d'abord les membres
+        members = self.session.exec(
+            select(ProjectMember).where(ProjectMember.project_id == project.id)
+        ).all()
+        for member in members:
+            self.session.delete(member)
+
+        # Supprime ensuite les tickets
+        tickets = self.session.exec(
+            select(Ticket).where(Ticket.project_id == project.id)
+        ).all()
+        for ticket in tickets:
+            self.session.delete(ticket)
+
+        self.session.flush()
         self.session.delete(project)
         self.session.flush()
         logger.info("Project deleted", project_id=project.id)

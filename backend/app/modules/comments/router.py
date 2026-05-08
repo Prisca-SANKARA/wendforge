@@ -14,6 +14,7 @@ from sqlmodel import Session
 from typing import List
 import structlog
 
+from app.modules.comments.models import Comment
 from app.database import get_session
 from app.core.security import TokenData, get_current_user
 from app.core.audit import AuditAction, get_audit_service

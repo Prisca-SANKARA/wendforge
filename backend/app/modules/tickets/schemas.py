@@ -11,7 +11,7 @@ TicketList    : version condensée pour les listes
 L'agent IA enrichit le TicketResponse avec
 des suggestions (priorité, assigné, doublons).
 """
-
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
@@ -26,7 +26,18 @@ class TicketCreate(BaseModel):
     status: TicketStatus = TicketStatus.TODO
     priority: TicketPriority = TicketPriority.MEDIUM
     ticket_type: TicketType = TicketType.TASK
+
     tags: Optional[List[str]] = None
+
+    @validator('tags', pre=True)
+    def parse_tags(cls, v):
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except:
+                return []
+        return v
     due_date: Optional[datetime] = None
     estimated_hours: Optional[float] = Field(default=None, ge=0)
     assignee_id: Optional[str] = None
@@ -70,7 +81,7 @@ class TicketResponse(BaseModel):
     status: TicketStatus
     priority: TicketPriority
     ticket_type: TicketType
-    tags: Optional[List[str]]
+    tags: Optional[List[str]] = None
     due_date: Optional[datetime]
     estimated_hours: Optional[float]
     actual_hours: Optional[float]
@@ -81,6 +92,16 @@ class TicketResponse(BaseModel):
     ai_suggestion: Optional[AISuggestion] = None
     created_at: datetime
     updated_at: datetime
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        if hasattr(obj, 'tags') and isinstance(obj.tags, str):
+            import json
+            try:
+                obj.tags = json.loads(obj.tags)
+            except Exception:
+                obj.tags = []
+        return super().model_validate(obj, **kwargs)
 
     class Config:
         from_attributes = True

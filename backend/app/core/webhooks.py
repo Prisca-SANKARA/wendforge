@@ -164,14 +164,14 @@ class WebhookService:
                 if response.status_code in (200, 201):
                     logger.info(
                         "Webhook sent successfully",
-                        event=event.value,
+                        webhook_event=event.value,
                         status_code=response.status_code
                     )
                     return True
                 else:
                     logger.warning(
                         "Webhook returned non-success status",
-                        event=event.value,
+                        webhook_event=event.value,
                         status_code=response.status_code,
                     )
                     return False
@@ -179,7 +179,7 @@ class WebhookService:
         except httpx.TimeoutException:
             logger.warning(
                 "Webhook timeout — n8n did not respond in time",
-                event=event.value,
+                webhook_event=event.value,
                 url=self.n8n_url,
             )
             return False
@@ -187,7 +187,7 @@ class WebhookService:
         except httpx.ConnectError:
             logger.warning(
                 "Webhook connection failed — n8n may be down",
-                event=event.value,
+                webhook_event=event.value,
                 url=self.n8n_url,
             )
             return False
@@ -195,7 +195,7 @@ class WebhookService:
         except Exception as e:
             logger.error(
                 "Webhook unexpected error",
-                event=event.value,
+                webhook_event=event.value,
                 error=str(e),
             )
             return False
@@ -228,7 +228,7 @@ class WebhookService:
         )
         logger.debug(
             "Webhook scheduled in background",
-            event=event.value
+            webhook_event=event.value
         )
 
 

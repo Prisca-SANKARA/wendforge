@@ -245,13 +245,13 @@ class AuditService:
         # Log structuré pour la console/fichier
         log_method = logger.info if success else logger.warning
         log_method(
-            "Audit log recorded",
-            action=action.value,
-            user_id=user_id,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            success=success,
-        )
+    "Audit log recorded",
+    audit_action=action.value,
+    audit_user_id=user_id,
+    audit_resource_type=resource_type,
+    audit_resource_id=resource_id,
+    audit_success=success,
+    )
 
         return audit_log
 
